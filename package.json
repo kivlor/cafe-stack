@@ -1,0 +1,36 @@
+{
+  "name": "cafe-stack",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "alchemy dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@alchemy.run/frontend-frameworks": "2.0.0-beta.81",
+    "@effect/platform-browser": "4.0.0",
+    "@effect/platform-bun": "4.0.0",
+    "@effect/platform-node": "4.0.0",
+    "@foldkit/ui": "0.167.0",
+    "alchemy": "^2.0.0-beta.81",
+    "effect": "4.0.0",
+    "foldkit": "0.167.0"
+  },
+  "devDependencies": {
+    "@foldkit/devtools": "0.167.0",
+    "@foldkit/vite-plugin": "0.27.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "latest",
+    "happy-dom": "^20.14.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}
