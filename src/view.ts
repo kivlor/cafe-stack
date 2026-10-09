@@ -106,21 +106,27 @@ const columnCardElements = (
   toParentMessage: (message: Message) => Message,
   h: HtmlBuilder<Message>,
 ): ReadonlyArray<Html> => {
-  const isNotDragged = (cardId: string) =>
-    Option.match(DragAndDrop.maybeDraggedItemId(model.dragAndDrop), {
-      onNone: () => true,
-      onSome: draggedId => draggedId !== cardId,
-    })
-  const notDragged = Array.filter(column.cards, ({ id }) =>
-    isNotDragged(id),
-  )
-  const cardElements = Array.map(notDragged, (card, index) =>
+  const allCardElements = Array.map(column.cards, (card, index) =>
     cardView(model, card, column.id, index, toParentMessage, h),
   )
 
+  // NOTE: the dragged card stays rendered through the Pending phase (press,
+  // pre-threshold) — hiding it there removes the card from the DOM and the
+  // pointerup→click never lands on anything inside it.
   if (!DragAndDrop.isDragging(model.dragAndDrop)) {
-    return cardElements
+    return allCardElements
   }
+
+  const maybeDraggedId = DragAndDrop.maybeDraggedItemId(model.dragAndDrop)
+  const visibleCards = Array.filter(column.cards, ({ id }) =>
+    Option.match(maybeDraggedId, {
+      onNone: () => true,
+      onSome: draggedId => draggedId !== id,
+    }),
+  )
+  const cardElements = Array.map(visibleCards, (card, index) =>
+    cardView(model, card, column.id, index, toParentMessage, h),
+  )
 
   return Option.match(DragAndDrop.maybeDropTarget(model.dragAndDrop), {
     onNone: () => cardElements,
@@ -128,7 +134,7 @@ const columnCardElements = (
       if (containerId !== column.id) {
         return cardElements
       }
-      const targetIndex = Math.min(index, notDragged.length)
+      const targetIndex = Math.min(index, visibleCards.length)
       const isPointerDrag = model.dragAndDrop.dragState._tag === 'Dragging'
       const insertElement = isPointerDrag
         ? dropPlaceholder(h)
@@ -290,8 +296,11 @@ const columnView = (
       ]),
       h.ul(
         [
+          // NOTE: min-h-24 keeps an empty column a droppable hit area —
+          // drop targets resolve via elementsFromPoint, so a zero-height ul
+          // can never be dropped onto.
           h.Class(
-            'flex flex-col gap-2 list-none overflow-y-auto min-h-0 flex-1',
+            'flex flex-col gap-2 list-none overflow-y-auto min-h-24 flex-1',
           ),
           ...DragAndDrop.droppable(column.id, column.name),
         ],

@@ -4,6 +4,8 @@ import {
   click,
   expect,
   given,
+  pointerDown,
+  pointerUp,
   role,
   scene,
   text,
@@ -36,6 +38,22 @@ const initialModel: Model = {
 const oneColumnModel: Model = {
   ...initialModel,
   columns: [Option.getOrThrow(Array.head(DEFAULT_COLUMNS))],
+}
+
+const emptyDoneModel: Model = {
+  ...initialModel,
+  columns: [
+    {
+      id: 'todo',
+      name: 'To Do',
+      cards: [
+        { id: 'card-1', title: 'Order beans' },
+        { id: 'card-2', title: 'Practice latte art' },
+      ],
+    },
+    { id: 'doing', name: 'Brewing', cards: [] },
+    { id: 'done', name: 'Served', cards: [] },
+  ],
 }
 
 describe('view', () => {
@@ -90,6 +108,65 @@ describe('update', () => {
         const todo = result.columns.find(column => column.id === 'todo')
         assert(todo?.cards.at(-1)?.title).toBe('Bloom the grounds')
         assert(result.maybeNewCardColumnId).toStrictEqual(Option.none())
+      }),
+    )
+  })
+
+  test('pressing a card keeps it in the DOM — pointerdown → Pending must not unrender it', () => {
+    scene(
+      { update, view },
+      given(oneColumnModel),
+      pointerDown(text('Order beans')),
+      expect(text('Order beans')).toExist(),
+      click(role('button', { name: 'Delete Order beans' })),
+      Command.resolve(SaveBoard, Message.CompletedSaveBoard()),
+      expect(text('Order beans')).toBeAbsent(),
+    )
+  })
+})
+
+describe('update · drag and drop', () => {
+  test('pointer drag into an empty column moves the card and saves', () => {
+    story(
+      update,
+      givenBoard(emptyDoneModel),
+      message(
+        Message.GotDragAndDropMessage({
+          message: DragAndDrop.Message.PressedDraggable({
+            itemId: 'card-2',
+            containerId: 'todo',
+            index: 1,
+            screenX: 0,
+            screenY: 0,
+          }),
+        }),
+      ),
+      message(
+        Message.GotDragAndDropMessage({
+          message: DragAndDrop.Message.MovedPointer({
+            screenX: 60,
+            screenY: 40,
+            clientX: 600,
+            clientY: 40,
+            maybeDropTarget: Option.some({
+              containerId: 'done',
+              index: 0,
+            }),
+          }),
+        }),
+      ),
+      message(
+        Message.GotDragAndDropMessage({
+          message: DragAndDrop.Message.ReleasedPointer(),
+        }),
+      ),
+      StoryCommand.resolve(SaveBoard, Message.CompletedSaveBoard()),
+      model(result => {
+        const done = result.columns.find(column => column.id === 'done')
+        assert(done?.cards[0]?.title).toBe('Practice latte art')
+        const todo = result.columns.find(column => column.id === 'todo')
+        const titles = todo?.cards.map(({ title }) => title)
+        assert(titles).not.toContain('Practice latte art')
       }),
     )
   })
